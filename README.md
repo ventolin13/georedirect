@@ -2,8 +2,8 @@
 
 | Путь | |
 | --- | --- |
-| `docs/hld.md` | Схема |
-| `docs/boilerplate.md` | Код и TODO |
+| [docs/hld.md](docs/hld.md) | Схема |
+| [docs/boilerplate.md](docs/boilerplate.md) | Код и TODO |
 | `deployments/local.yaml` | Локальный yaml |
 | `deployments/prod.yaml` | Yaml региона |
 | `deployments/pod.yaml` | Под |
