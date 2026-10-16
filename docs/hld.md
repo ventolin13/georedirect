@@ -4,17 +4,58 @@
 
 ## Путь
 
-```
-клиенты
-  → Cloudflare, TCP дальше
-    → регион
-        HAProxy
-          → под, под, …
-        память пода
-        Redis: чёрный список и рейт-лимиты
-        Redis: справочник
-  события → Kafka → ClickHouse
-            ↘ воркер антифрода → Redis чёрного списка
+```mermaid
+flowchart TB
+  clients[Клиенты] --> cf["Cloudflare, TCP дальше"]
+
+  subgraph regionA [Регион A]
+    haA[HAProxy]
+    subgraph podsA [headless поды]
+      direction LR
+      pa1[headless под]
+      pa2[headless под]
+      pa3[headless под]
+      paN["headless под …"]
+    end
+    memA[память каждого пода]
+    redisA["Redis: чёрный список и рейт-лимиты"]
+    refA["Redis: справочник"]
+    haA --> podsA
+    podsA --> memA
+    memA --> redisA
+    memA --> refA
+  end
+
+  subgraph regionB [Регион B]
+    haB[HAProxy]
+    subgraph podsB [headless поды]
+      direction LR
+      pb1[headless под]
+      pb2[headless под]
+      pb3[headless под]
+      pbN["headless под …"]
+    end
+    memB[память каждого пода]
+    redisB["Redis: чёрный список и рейт-лимиты"]
+    refB["Redis: справочник"]
+    haB --> podsB
+    podsB --> memB
+    memB --> redisB
+    memB --> refB
+  end
+
+  cf --> regionA
+  cf --> regionB
+
+  kafka[Kafka]
+  ch[ClickHouse]
+  worker[воркер антифрода]
+  podsA --> kafka
+  podsB --> kafka
+  kafka --> ch
+  kafka --> worker
+  worker --> redisA
+  worker --> redisB
 ```
 
 Регион принимает свою долю и трафик ещё одного региона.
@@ -22,6 +63,12 @@
 Cloudflare отдаёт TCP. TLS заканчивается в поде, sidecar нет. HAProxy не разбирает TLS, шлёт Proxy Protocol v2, берёт адреса подов из DNS headless Service и не перезагружается при смене числа подов. Иначе отпечатка ClientHello нет, а адрес клиента — адрес прокси.
 
 `/healthz` перезапускает контейнер. `/readyz` убирает под из DNS. Число подов растёт по новым соединениям, не по процессору. Минимум больше нуля: холодный старт на клике не переживаем.
+
+## Кто что делает
+
+Приложение на клике снимает отпечаток, проверяет чёрный список и рейт-лимит, пишет событие в Kafka и отвечает. Разбора потока оно не ждёт.
+
+Воркер — другое приложение. Он читает клики из Kafka пачками, находит частые адреса и подсети и дописывает их в Redis чёрного списка. Следующий такой клик отклоняет уже под. Запись из Kafka в ClickHouse тоже не в этом процессе.
 
 ## До ответа
 
@@ -32,8 +79,6 @@ Cloudflare отдаёт TCP. TLS заканчивается в поде, sidecar
 Redis чёрного списка недоступен — клик проходит. Иначе падение Redis останавливает редирект. Событие всё равно пишется.
 
 На клике нет похода в PostgreSQL. Оффер и правила читаются из памяти пода.
-
-Воркер антифрода и запись Kafka в ClickHouse в этот процесс не входят.
 
 ## Поставка
 
