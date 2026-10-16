@@ -6,56 +6,48 @@
 
 ```mermaid
 flowchart TB
-  clients[Клиенты] --> cf["Cloudflare, TCP дальше"]
+  clients[Клиенты] --> cf[Cloudflare]
 
-  subgraph regionA [Регион A]
-    haA[HAProxy]
-    subgraph podsA [headless поды]
-      direction LR
-      pa1[headless под]
-      pa2[headless под]
-      pa3[headless под]
-      paN["headless под …"]
+  subgraph row [ ]
+    direction LR
+    subgraph regionA [Регион A]
+      direction TB
+      haA[HAProxy]
+      subgraph podsA [headless поды]
+        direction LR
+        pa1[под]
+        pa2[под]
+        pa3[…]
+      end
+      redisA["Redis: список"]
+      refA["Redis: справочник"]
+      haA --> podsA
+      podsA --> redisA
+      podsA --> refA
     end
-    memA[память каждого пода]
-    redisA["Redis: чёрный список и рейт-лимиты"]
-    refA["Redis: справочник"]
-    haA --> podsA
-    podsA --> memA
-    memA --> redisA
-    memA --> refA
+    subgraph regionB [Регион B]
+      direction TB
+      haB[HAProxy]
+      subgraph podsB [headless поды]
+        direction LR
+        pb1[под]
+        pb2[под]
+        pb3[…]
+      end
+      redisB["Redis: список"]
+      refB["Redis: справочник"]
+      haB --> podsB
+      podsB --> redisB
+      podsB --> refB
+    end
   end
 
-  subgraph regionB [Регион B]
-    haB[HAProxy]
-    subgraph podsB [headless поды]
-      direction LR
-      pb1[headless под]
-      pb2[headless под]
-      pb3[headless под]
-      pbN["headless под …"]
-    end
-    memB[память каждого пода]
-    redisB["Redis: чёрный список и рейт-лимиты"]
-    refB["Redis: справочник"]
-    haB --> podsB
-    podsB --> memB
-    memB --> redisB
-    memB --> refB
-  end
-
-  cf --> regionA
-  cf --> regionB
-
-  kafka[Kafka]
-  ch[ClickHouse]
-  worker[воркер антифрода]
-  podsA --> kafka
+  cf --> haA
+  cf --> haB
+  podsA --> kafka[Kafka]
   podsB --> kafka
-  kafka --> ch
-  kafka --> worker
-  worker --> redisA
-  worker --> redisB
+  kafka --> ch[ClickHouse]
+  kafka --> worker[воркер]
 ```
 
 Регион принимает свою долю и трафик ещё одного региона.
