@@ -1,0 +1,20 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: georedirect
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: georedirect
+  minReplicaCount: 3
+  maxReplicaCount: 100
+  cooldownPeriod: 60
+  pollingInterval: 2
+  triggers:
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus.monitoring.svc:9090
+        metricName: haproxy_frontend_connections_rate
+        query: sum(rate(haproxy_frontend_connections_total{frontend="georedirect_in"}[1m]))
+        threshold: "1000"

@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: georedirect
+spec:
+  clusterIP: None
+  selector:
+    app: georedirect
+  ports:
+    - name: tcp
+      port: 8443
+      targetPort: tcp
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: georedirect
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: georedirect
+  template:
+    metadata:
+      labels:
+        app: georedirect
+    spec:
+      containers:
+        - name: georedirect
+          image: georedirect:latest
+          ports:
+            - name: tcp
+              containerPort: 8443
+          env:
+            - name: CONFIG
+              value: /config/prod.yaml
+            - name: TLS_CERT
+              value: /certs/tls.crt
+            - name: TLS_KEY
+              value: /certs/tls.key
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: tls
+              mountPath: /certs
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: tcp
+              scheme: HTTPS
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: tcp
+              scheme: HTTPS
+            periodSeconds: 2
+      terminationGracePeriodSeconds: 15
+      volumes:
+        - name: config
+          configMap:
+            name: georedirect
+        - name: tls
+          secret:
+            secretName: georedirect-tls

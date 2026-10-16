@@ -1,0 +1,11 @@
+/georedirect
+*.exe
+*.test
+
+/doc
+
+/certs
+*.key
+*.pem
+
+.DS_Store

@@ -1,0 +1,11 @@
+listen_addr: ":8080"
+redis_addr: "127.0.0.1:6379"
+reference_redis_addr: "127.0.0.1:6380"
+kafka_addr: "127.0.0.1:9092"
+kafka_topic: "georedirect"
+offer_url: "https://example.com/offer"
+proxy_protocol: false
+read_timeout: 5s
+write_timeout: 5s
+shutdown_timeout: 15s
+redis_timeout: 20ms
